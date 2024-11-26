@@ -1,23 +1,29 @@
 import optuna
 from train import train_model  # モデルの訓練関数をインポート
 
-def objective(trial):
-    # Optunaのobjective関数として、train.pyで定義したtrain_model関数を使用
-    return train_model(trial)
-
+# Optunaのベイズ最適化
 def perform_bayesian_optimization():
-    # Optunaでハイパーパラメータ最適化のためのStudyを作成
+    """Optunaによるベイズ最適化の実行"""
     study = optuna.create_study(direction='minimize')
-    study.optimize(objective, n_trials=50)  # 試行回数は任意
+    n_trials = 10
+    progress_bar = tqdm(total=n_trials, desc="Bayesian Optimization Progress", unit="trial")
 
-    # 最適な結果を表示
+    def callback(study, trial):
+        progress_bar.set_description(f"Trial {trial.number+1} | Best Loss: {study.best_value:.6f}")
+        progress_bar.update(1)
+
+    study.optimize(train_model, n_trials=n_trials, callbacks=[callback])
+
+    progress_bar.close()
     print("Best Hyperparameters:", study.best_params)
     print("Best Loss:", study.best_value)
 
-    # 学習済みのモデルパラメータを保存
-    best_params = study.best_params
-    return best_params
+    return study.best_params
 
 if __name__ == '__main__':
+    # JSONデータの正規化
+    normalize_json_data('../data/data.json', '../data/data_normalized.json')
+
+    # Optunaによるベイズ最適化の実行
     best_params = perform_bayesian_optimization()
     print("Optimization completed. Best parameters:", best_params)
